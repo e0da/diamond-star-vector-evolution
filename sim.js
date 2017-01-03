@@ -78,12 +78,11 @@ function create() {
     createRandomCreature(population.beta)
   }
 
-  summary = game.add.text(16, 16, summaryText(),
-                          { fontSize: '12px', fill: 'white' })
+  summary = document.getElementById('summary')
 }
 
 function update() {
-  summary.text = summaryText()
+  summary.innerText = summaryText()
 
   let creatures = population.alpha.children.concat(population.beta.children)
 
