@@ -1,0 +1,25 @@
+html, body {
+  background: #333;
+  color: #eee;
+  font-family: sans-serif;
+}
+
+body {
+  width: 800px;
+  margin: auto;
+  margin-top: 1em;
+}
+
+#game {
+  height: 600px;
+}
+
+header {
+  text-align: center;
+}
+
+footer {
+  margin-top: 1em;
+  font-size: small;
+  text-align: right;
+}
