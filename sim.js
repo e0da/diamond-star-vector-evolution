@@ -23,8 +23,8 @@ var BETA_MASS = 1
 var BOUNCE = 0.1
 var DAMAGE = 0.34
 var MUTATION_RATE = 0.1
-var ALPHA_OLD_AGE = 3
-var BETA_OLD_AGE = 5
+var ALPHA_OLD_AGE = 10
+var BETA_OLD_AGE = 15
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, 'game',
                        { preload: preload, create: create, update: update })
