@@ -1,15 +1,22 @@
 'use strict'
 
-var START_POPULATION = 20
-var GENE_LENGTH = 1000, GENOME_LENGTH = 10
+var ALPHA_POPULATION_SIZE = 20
+var BETA_POPULATION_SIZE = 400
+var POPULATION_SIZE = ALPHA_POPULATION_SIZE + BETA_POPULATION_SIZE
+
+var GENE_LENGTH = 1000, GENOME_LENGTH = 2
 var SUMMARY = `Generation: %s
 Alpha fitness: %s
 Beta fitness: %s`
 
 var SPEED = 200
-var BOUNCE = 1
-var DAMAGE = 0.5
-var MUTATION_THRESHOLD = 0.1
+var ALPHA_MASS = 2
+var BETA_MASS = 1
+var BOUNCE = 0.1
+var DAMAGE = 0.34
+var MUTATION_RATE = 0.1
+var ALPHA_OLD_AGE = 3
+var BETA_OLD_AGE = 5
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, 'game',
                        { preload: preload, create: create, update: update })
@@ -22,8 +29,23 @@ var fitness = {
   },
 
   beta: function (creature) {
-    return creature.score
+    return age(creature)
   }
+}
+
+var oldAge = {
+  alpha: ALPHA_OLD_AGE,
+  beta: BETA_OLD_AGE,
+}
+
+var populationSize = {
+  alpha: ALPHA_POPULATION_SIZE,
+  beta: BETA_POPULATION_SIZE,
+}
+
+var mass = {
+  alpha: ALPHA_MASS,
+  beta: BETA_MASS,
 }
 
 function preload() {
@@ -45,10 +67,15 @@ function create() {
     group.name = groupNames[i]
     group.fitness = fitness[group.name]
     population[group.name] = group
+    group.populationSize = populationSize[group.name]
+  }
 
-    for (let i = 0; i < START_POPULATION / 2; i++) {
-      createRandomCreature(group)
-    }
+  for (let i = 0; i < ALPHA_POPULATION_SIZE; i++) {
+    createRandomCreature(population.alpha)
+  }
+
+  for (let i = 0; i < BETA_POPULATION_SIZE; i++) {
+    createRandomCreature(population.beta)
   }
 
   summary = game.add.text(16, 16, summaryText(),
@@ -70,19 +97,21 @@ function update() {
 
   for (let i = 0; i < creatures.length; i++) {
     let creature = creatures[i]
+    if (age(creature) > oldAge[creature.group]) {
+      die(creature)
+    }
     let genome = creature.genome
     creature.body.acceleration.x = speed(genome[0][step])
     creature.body.acceleration.y = speed(genome[1][step])
-    population.beta.children.map(function (creature) {
-      if (creature.alive) creature.score += 1
-    })
   }
 
-  // game.physics.arcade.collide(population.alpha, population.alpha, breed)
-  // game.physics.arcade.collide(population.beta, population.beta, breed)
+  population.beta.children.map(function (creature) {
+    if (creature.alive) creature.score += 1
+  })
+
   game.physics.arcade.collide(population.alpha)
   game.physics.arcade.collide(population.beta)
-  game.physics.arcade.collide(population.alpha, population.beta, eat)
+  game.physics.arcade.collide(population.alpha, population.beta, bite)
 }
 
 function randomGenome() {
@@ -103,12 +132,14 @@ function randomLocation() {
 }
 
 function createCreature(group, genome, location) {
-  let sprite = group.create(location.x, location.y, group.name)
-  sprite.genome = randomGenome()
-  sprite.score = 0
-  sprite.group = group
-  sprite.body.collideWorldBounds = true
-  sprite.body.bounce.x = sprite.body.bounce.y = BOUNCE
+  let creature = group.create(location.x, location.y, group.name)
+  creature.genome = randomGenome()
+  creature.score = 0
+  creature.group = group
+  creature.generation = generation
+  creature.body.collideWorldBounds = true
+  creature.body.bounce.x = creature.body.bounce.y = BOUNCE
+  creature.body.mass = mass[group.name]
 }
 
 function createRandomCreature(group) {
@@ -119,12 +150,11 @@ function speed(gene) {
   return Math.floor(2 * SPEED * gene) - SPEED
 }
 
-function eat(alpha, beta) {
+function bite(alpha, beta) {
   beta.health -= DAMAGE
   if (beta.health < 0) {
     alpha.score += 2
-    beta.kill()
-    population.beta.remove(beta)
+    die(beta)
   }
   alpha.score += 1
 }
@@ -140,7 +170,7 @@ function breed(left, right) {
     let gene = leftHalf.concat(rightHalf)
 
     for (let j = 0; j < gene.length; j++) {
-      if (Math.random() > MUTATION_THRESHOLD) {
+      if (Math.random() > MUTATION_RATE) {
         gene[j] = Math.random()
       }
     }
@@ -167,19 +197,25 @@ function breedGroup(group) {
   let doomed = group
     .children
     .sort(function (a, b) { return fit(b) - fit(a) })
-    .slice(START_POPULATION / 4, -1)
+    .slice(group.populationSize / 2, -1)
   for (let i = 0; i < doomed.length; i++) {
-    doomed[i].kill()
-    group.remove(doomed[i])
+    die(doomed[i])
   }
-  var foo = 0
-  while (group.children.length < START_POPULATION / 2) {
+  while (group.children.length < group.populationSize) {
     breed(game.rnd.pick(group.children), game.rnd.pick(group.children))
-    if (foo++ > 20) break
   }
 }
 
 function evolve() {
   breedGroup(population.alpha)
   breedGroup(population.beta)
+}
+
+function age(creature) {
+  return generation - creature.generation
+}
+
+function die(creature) {
+  creature.kill()
+  creature.group.remove(creature)
 }
