@@ -6,11 +6,19 @@ var POPULATION_SIZE = ALPHA_POPULATION_SIZE + BETA_POPULATION_SIZE
 
 var GENE_LENGTH = 1000, GENOME_LENGTH = 2
 var SUMMARY = `Generation: %s
-Alpha fitness: %s
-Beta fitness: %s`
+Avg Alpha Fitness: %s
+Avg Beta Fitness: %s
+Max Alpha Fitness: %s
+Max Beta Fitness: %s
+Min Alpha Fitness: %s
+Min Beta Fitness: %s
+Alpha Population: %s
+Beta Population: %s
+Avg Alpha Age: %s
+Avg Beta Age: %s`
 
 var SPEED = 200
-var ALPHA_MASS = 2
+var ALPHA_MASS = 5
 var BETA_MASS = 1
 var BOUNCE = 0.1
 var DAMAGE = 0.34
@@ -55,6 +63,7 @@ function preload() {
 
 function create() {
   game.physics.startSystem(Phaser.Physics.ARCADE)
+  game.stage.disableVisibilityChange = true;
 
   generation = 1
   step = 0
@@ -96,7 +105,7 @@ function update() {
 
   for (let i = 0; i < creatures.length; i++) {
     let creature = creatures[i]
-    if (age(creature) > oldAge[creature.group]) {
+    if (age(creature) > oldAge[creature.group.name]) {
       die(creature)
     }
     let genome = creature.genome
@@ -184,11 +193,37 @@ function averageFitness(group) {
   }, 0) / group.children.length
 }
 
+function averageAge(group) {
+  return group.children.reduce(function (total, creature) {
+    return total + age(creature)
+  }, 0) / group.children.length
+}
+
 function summaryText() {
   return SUMMARY
     .replace('%s', generation)
     .replace('%s', averageFitness(population.alpha))
     .replace('%s', averageFitness(population.beta))
+    .replace('%s', Math.max.apply(null, allFitnesses(population.alpha)))
+    .replace('%s', Math.max.apply(null, allFitnesses(population.beta)))
+    .replace('%s', Math.min.apply(null, allFitnesses(population.alpha)))
+    .replace('%s', Math.min.apply(null, allFitnesses(population.beta)))
+    .replace('%s', population.alpha.children.length)
+    .replace('%s', population.beta.children.length)
+    .replace('%s', averageAge(population.alpha))
+    .replace('%s', averageAge(population.beta))
+}
+
+function allFitnesses(group) {
+  return group.children.map(function (creature) {
+    return creature.group.fitness(creature)
+  })
+}
+
+function allAges(group) {
+  return group.children.map(function (creature) {
+    return age(creature)
+  })
 }
 
 function breedGroup(group) {
